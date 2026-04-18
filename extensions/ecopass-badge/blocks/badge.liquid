@@ -1,0 +1,110 @@
+{% liquid
+  assign materials = product.metafields.custom.materiali.value | default: product.metafields.ecopass.materials.value
+  assign carbon_footprint = product.metafields.custom.carbon_footprint.value | default: product.metafields.ecopass.carbon_footprint.value
+  assign recyclability_index = product.metafields.custom.riciclabilit.value | default: product.metafields.ecopass.recyclability_index.value
+  assign fingerprint = product.title | append: ' ' | append: product.type | append: ' ' | append: product.vendor | append: ' ' | append: product.tags | downcase
+
+  assign badge_color = shop.metafields.ecopass_settings.badge_color.value | default: '#1E8E5A'
+  assign text_color = shop.metafields.ecopass_settings.text_color.value | default: '#FFFFFF'
+  assign border_radius = shop.metafields.ecopass_settings.border_radius.value | default: 12
+  assign font_size = shop.metafields.ecopass_settings.font_size.value | default: 14
+
+  assign has_data = false
+  if materials != blank or carbon_footprint != blank or recyclability_index != blank
+    assign has_data = true
+  endif
+
+  assign show_badge = true
+
+  if materials == blank or carbon_footprint == blank or recyclability_index == blank
+    if fingerprint contains 'snowboard'
+      if materials == blank
+        assign materials = 'Legno, fibra di vetro, acciaio'
+      endif
+      if carbon_footprint == blank
+        assign carbon_footprint = '18.5 kg CO2e'
+      endif
+      if recyclability_index == blank
+        assign recyclability_index = 62
+      endif
+    elsif fingerprint contains 'shirt' or fingerprint contains 't-shirt' or fingerprint contains 'hoodie'
+      if materials == blank
+        assign materials = 'Cotone, poliestere riciclato'
+      endif
+      if carbon_footprint == blank
+        assign carbon_footprint = '6.8 kg CO2e'
+      endif
+      if recyclability_index == blank
+        assign recyclability_index = 81
+      endif
+    elsif fingerprint contains 'shoe' or fingerprint contains 'sneaker'
+      if materials == blank
+        assign materials = 'Gomma, tessuto tecnico, EVA'
+      endif
+      if carbon_footprint == blank
+        assign carbon_footprint = '9.7 kg CO2e'
+      endif
+      if recyclability_index == blank
+        assign recyclability_index = 58
+      endif
+    else
+      if materials == blank
+        assign materials = 'Composito tecnico certificato'
+      endif
+      if carbon_footprint == blank
+        assign carbon_footprint = '8.9 kg CO2e'
+      endif
+      if recyclability_index == blank
+        assign recyclability_index = 70
+      endif
+    endif
+  endif
+%}
+
+{% if request.design_mode and has_data == false %}
+  {% assign materials = 'Cotone riciclato 80%, Poliestere 20%' %}
+  {% assign carbon_footprint = '2.1 kg CO2e' %}
+  {% assign recyclability_index = 78 %}
+{% endif %}
+
+{% if show_badge %}
+  {{ 'ecopass-badge.css' | asset_url | stylesheet_tag }}
+  <div
+    class="ecopass-badge"
+    style="
+      --ecopass-badge-color: {{ badge_color }};
+      --ecopass-text-color: {{ text_color }};
+      --ecopass-border-radius: {{ border_radius }}px;
+      --ecopass-font-size: {{ font_size }}px;
+    "
+  >
+    <div class="ecopass-badge__header">
+      <span class="ecopass-badge__icon" aria-hidden="true">🌱</span>
+      <span class="ecopass-badge__title">Digital Product Passport</span>
+    </div>
+
+    <ul class="ecopass-badge__list" role="list">
+      <li>
+        <strong>Materiali:</strong>
+        {% if materials != blank %}{{ materials }}{% else %}Dato non disponibile{% endif %}
+      </li>
+      <li>
+        <strong>Carbon footprint:</strong>
+        {% if carbon_footprint != blank %}{{ carbon_footprint }}{% else %}Dato non disponibile{% endif %}
+      </li>
+      <li>
+        <strong>Riciclabilità:</strong>
+        {% if recyclability_index != blank %}{{ recyclability_index }}/100{% else %}Dato non disponibile{% endif %}
+      </li>
+    </ul>
+  </div>
+  <script src="{{ 'ecopass-badge.js' | asset_url }}" defer></script>
+{% endif %}
+
+{% schema %}
+{
+  "name": "EcoPass badge DPP",
+  "target": "section",
+  "settings": []
+}
+{% endschema %}

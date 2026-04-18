@@ -1,0 +1,11 @@
+node_modules
+build
+.git
+.github
+.cursor
+*.log
+.env
+.env.*
+!.env.example
+prisma/dev.sqlite
+prisma/dev.sqlite-journal

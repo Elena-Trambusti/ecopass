@@ -1,0 +1,9 @@
+name = "EcoPass Web"
+roles = ["frontend", "backend"]
+webhooks_path = "/webhooks"
+auth_callback_path = "/auth/callback"
+
+[commands]
+dev = "npm run dev:remix"
+build = "npm run build"
+start = "npm run start"

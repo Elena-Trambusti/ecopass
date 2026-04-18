@@ -1,0 +1,52 @@
+.ecopass-badge {
+  background: linear-gradient(
+    145deg,
+    color-mix(in srgb, var(--ecopass-badge-color) 92%, #ffffff 8%),
+    var(--ecopass-badge-color)
+  );
+  color: var(--ecopass-text-color);
+  border-radius: var(--ecopass-border-radius);
+  font-size: var(--ecopass-font-size);
+  padding: 0.9rem 1rem;
+  margin: 0.8rem 0;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  max-width: 640px;
+}
+
+.ecopass-badge__header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.4rem;
+}
+
+.ecopass-badge__icon {
+  font-size: calc(var(--ecopass-font-size) + 4px);
+  line-height: 1;
+}
+
+.ecopass-badge__title {
+  font-weight: 700;
+  letter-spacing: 0.01em;
+}
+
+.ecopass-badge__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.3rem;
+}
+
+.ecopass-badge__list li {
+  line-height: 1.45;
+  opacity: 0.96;
+}
+
+@media (max-width: 768px) {
+  .ecopass-badge {
+    padding: 0.75rem 0.85rem;
+    max-width: 100%;
+  }
+}

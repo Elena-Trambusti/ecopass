@@ -1,0 +1,41 @@
+{
+  "name": "ecopass",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "remix vite:build",
+    "dev": "npx shopify app dev",
+    "dev:remix": "remix vite:dev",
+    "start": "remix-serve ./build/server/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "typecheck": "tsc --noEmit",
+    "prisma:generate": "prisma generate",
+    "prisma:migrate": "prisma migrate dev",
+    "prisma:migrate:deploy": "prisma migrate deploy"
+  },
+  "dependencies": {
+    "@prisma/client": "^6.8.2",
+    "@remix-run/node": "2.17.4",
+    "@remix-run/react": "2.17.4",
+    "@remix-run/serve": "^2.17.4",
+    "@shopify/app-bridge-react": "latest",
+    "@shopify/polaris": "latest",
+    "@shopify/shopify-api": "latest",
+    "@shopify/shopify-app-remix": "latest",
+    "@shopify/shopify-app-session-storage-prisma": "^9.0.0",
+    "isbot": "latest",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  },
+  "devDependencies": {
+    "@remix-run/dev": "2.17.4",
+    "@types/node": "latest",
+    "@types/react": "latest",
+    "@types/react-dom": "latest",
+    "prisma": "^6.8.2",
+    "typescript": "latest",
+    "vite": "6.4.2",
+    "vitest": "^4.1.4"
+  }
+}

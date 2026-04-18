@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="EcoPass logo">
+  <defs>
+    <linearGradient id="g1" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#1E8E5A"/>
+      <stop offset="100%" stop-color="#166B44"/>
+    </linearGradient>
+  </defs>
+  <rect x="2" y="2" width="60" height="60" rx="14" fill="url(#g1)"/>
+  <path d="M19 37c0-8 6-14 14-14 7 0 12 4 13 10h-7c-1-2-3-3-6-3-4 0-7 3-7 7s3 7 7 7c3 0 5-1 6-3h7c-2 6-7 10-13 10-8 0-14-6-14-14z" fill="#fff"/>
+  <circle cx="47" cy="18" r="4" fill="#B8F5D6"/>
+</svg>
+
