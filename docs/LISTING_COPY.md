@@ -38,3 +38,10 @@ EcoPass is designed for teams that want compliant-looking product transparency w
 - 2 storefront screenshots with badge visible
 - Optional 30-60s demo video
 
+## Partner Dashboard — URL pubblici (incolla così)
+
+- Privacy policy: https://elena-trambusti.github.io/ecopass-legal-pages/privacy.html
+- Terms of service: https://elena-trambusti.github.io/ecopass-legal-pages/terms.html
+- Support / contact: https://elena-trambusti.github.io/ecopass-legal-pages/support.html
+- Codice sorgente (repository): https://github.com/Elena-Trambusti/ecopass
+

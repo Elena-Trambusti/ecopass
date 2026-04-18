@@ -1,5 +1,7 @@
 # EcoPass Shopify App
 
+Repository: https://github.com/Elena-Trambusti/ecopass
+
 EcoPass is an embedded Shopify app that lets merchants configure and display a Digital Product Passport badge on product pages through a Theme App Extension.
 
 ## Core Features
