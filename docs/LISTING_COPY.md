@@ -45,3 +45,52 @@ EcoPass is designed for teams that want compliant-looking product transparency w
 - Support / contact: https://elena-trambusti.github.io/ecopass-legal-pages/support.html
 - Codice sorgente (repository): https://github.com/Elena-Trambusti/ecopass
 
+## Partner Dashboard — valori tecnici (allineati al codice)
+
+- **App name (display):** EcoPass
+- **App URL (produzione):** `https://ecopass-shopify.fly.dev`
+- **Allowed redirection URL(s)** (devono combaciare con `shopify.app.toml` e con l’app in Partners):
+  - `https://ecopass-shopify.fly.dev/auth/callback`
+  - `https://ecopass-shopify.fly.dev/auth/shopify/callback`
+  - `https://ecopass-shopify.fly.dev/api/auth/callback`
+- **OAuth scopes richiesti:** `read_products`, `write_products` (vedi `shopify.app.toml` / variabile `SCOPES` in produzione).
+- **Billing:** piano Shopify **EcoPass Pro** — EUR **14.99** ogni **30** giorni, **7** giorni di prova (`ECOPASS_BILLING_*` in `app/shopify.server.ts`).
+- **Distribuzione app:** App Store (`AppDistribution.AppStore` nel codice).
+
+### Categorie e parole chiave suggerite (listing)
+
+Primary category: **Store design** (Theme App Extension + blocco tema).
+
+Secondary category: **Selling products** (informazioni prodotto / trasparenza).
+
+Search keywords (inglese, separate come richiesto dal form):
+
+`sustainability, digital product passport, product badge, transparency, EU compliance, theme extension, metafields`
+
+### Dichiarazioni su dati personali / privacy (testo base per i questionari)
+
+Usa formulazioni coerenti con `PRIVACY.md`. EcoPass:
+
+- Memorizza **identificativo negozio (dominio)** e **impostazioni badge** nel database dell’app (modelli `Shop` / `Settings`).
+- Usa **sessioni OAuth Shopify** (token di accesso e, se forniti da Shopify, dati staff come email/nome nel modello Session) come richiesto dal login embedded.
+- Crea/usa **metafield prodotto e shop** tramite Admin API per materiali, impronta carbonio, riciclabilità e stato del badge (vedi `shopify.server.ts`).
+- **Non vende** dati. Implementa webhook **APP_UNINSTALLED**, **CUSTOMERS_DATA_REQUEST**, **CUSTOMERS_REDACT**, **SHOP_REDACT** per conformità Shopify/GDPR.
+
+Se il form chiede “customer personal data”: l’app non è un CRM; i contenuti mostrati nel badge dipendono dai **dati prodotto** che il merchant inserisce (metafield). Rispondere in modo prudente e allineato alla privacy policy pubblicata.
+
+### Cosa deve fare solo tu nel browser (non automatizzabile)
+
+1. Accedi a **[Shopify Partners](https://partners.shopify.com)** → **Apps** → **EcoPass**.
+2. Completa **App listing** (testi sopra, URL legali, email supporto che controlli davvero).
+3. Carica **icona 1024×1024** e **screenshot** (admin + storefront con badge).
+4. Rispondi alle **domande compliance / privacy / categorie** usando le sezioni sopra.
+5. Verifica che **URLs** dell’app e redirect in Partners coincidano con Fly e `shopify.app.toml`.
+6. Quando tutto è verde: **Submit app for review** / **Distribution** sullo Shopify App Store (etichetta esatta dipende dalla UI).
+
+Dopo eventuali modifiche a estensioni o URL: dalla cartella progetto eseguire `npx shopify app deploy` per pubblicare una nuova versione configurazione app.
+
+## Verifica automatizzabile (fatto sul repo il 2026-04-19)
+
+- `npm run typecheck`, `npm run build`, `npm run test`: **passati**.
+- `flyctl deploy --remote-only` verso **`ecopass-shopify`**: **completato**; app su `https://ecopass-shopify.fly.dev`.
+

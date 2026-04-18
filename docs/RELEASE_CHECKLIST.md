@@ -1,5 +1,7 @@
 # EcoPass Release & Submission Checklist
 
+**Ultima esecuzione automatizzata in locale (2026-04-19):** `typecheck`, `build`, `test` OK; deploy Fly `ecopass-shopify` OK. Restano le voci che richiedono il Partner Dashboard o giudizio umano (screenshot, email attiva, test manuali sugli store).
+
 ## 1) Security & Secrets
 
 - [ ] `.env` is ignored by git.
