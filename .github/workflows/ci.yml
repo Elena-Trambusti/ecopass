@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgresql://ecopass:ecopass@localhost:5432/ecopass?schema=public"
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: ecopass
+          POSTGRES_PASSWORD: ecopass
+          POSTGRES_DB: ecopass
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U ecopass -d ecopass"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Wait for Postgres
+        shell: bash
+        run: |
+          for i in {1..40}; do
+            (echo > /dev/tcp/127.0.0.1/5432) >/dev/null 2>&1 && exit 0
+            sleep 1
+          done
+          echo "Postgres not ready" && exit 1
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build
+
+      - name: Test
+        run: npm run test
