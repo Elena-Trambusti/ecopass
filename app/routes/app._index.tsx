@@ -1,5 +1,5 @@
-import { json, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
-import { Form, useActionData, useLoaderData, useNavigation } from "@remix-run/react";
+import { json, redirect, type ActionFunctionArgs, type LoaderFunctionArgs } from "@remix-run/node";
+import { Form, useActionData, useLoaderData, useNavigation, useSearchParams } from "@remix-run/react";
 import {
   Banner,
   BlockStack,
@@ -7,39 +7,80 @@ import {
   Button,
   Card,
   Checkbox,
+  IndexTable,
   InlineStack,
   Page,
   RangeSlider,
   Text,
-  TextField,
 } from "@shopify/polaris";
 import { useMemo, useState } from "react";
+import { adminCopy, interpolate, type AdminLocale } from "../i18n/admin";
+import { ensureAutoMetafieldsForProducts } from "../models/dpp-sync.server";
 import { getOrCreateSettingsByShopDomain, saveSettingsByShopDomain } from "../models/settings.server";
+import { fetchProductsPage, type ProductWithDppFields } from "../models/products-page.server";
 import { authenticate } from "../shopify.server";
-import { buildAutoDppFromProduct } from "../utils/dpp";
+import { logServerError } from "../utils/log.server";
+import { getUiLocale } from "../utils/locale.server";
+import { isHexColor } from "../utils/validation";
+
+const PAGE_SIZE = 15;
 
 type LoaderData = {
+  uiLocale: AdminLocale;
   settings: {
     badgeColor: string;
     textColor: string;
     borderRadius: number;
     fontSize: number;
     isEnabled: boolean;
+    showEstimatedFallbacks: boolean;
   };
   products: Array<{
     id: string;
     title: string;
+    materialsOk: boolean;
+    carbonOk: boolean;
+    recycleOk: boolean;
+    status: "complete" | "partial" | "empty";
   }>;
+  pagination: {
+    after: string | null;
+    hasNextPage: boolean;
+    endCursor: string | null;
+    pageSize: number;
+  };
 };
 
 type ActionData =
   | { ok: true; message: string }
   | { ok: false; message: string; fieldErrors?: Record<string, string> };
 
-const BILLING_PLAN_LABEL = "EcoPass Pro";
-const BILLING_PRICE_EUR = 14.99;
-const BILLING_TRIAL_DAYS = 7;
-const BILLING_CYCLE_DAYS = 30;
+const ECOPASS_BILLING_PLAN_LABEL = "EcoPass Pro";
+const ECOPASS_BILLING_PRICE_EUR = 14.99;
+const ECOPASS_BILLING_TRIAL_DAYS = 7;
+const ECOPASS_BILLING_CYCLE_DAYS = 30;
+
+function rowStatus(p: ProductWithDppFields): LoaderData["products"][0] {
+  const materialsOk =
+    Boolean(p.customMateriali?.value) || Boolean(p.legacyMaterials?.value);
+  const carbonOk = Boolean(p.customCarbon?.value) || Boolean(p.legacyCarbon?.value);
+  const recycleOk =
+    Boolean(p.customRiciclabilita?.value) || Boolean(p.legacyRecyclability?.value);
+
+  let status: "complete" | "partial" | "empty";
+  if (materialsOk && carbonOk && recycleOk) status = "complete";
+  else if (materialsOk || carbonOk || recycleOk) status = "partial";
+  else status = "empty";
+
+  return {
+    id: p.id,
+    title: p.title,
+    materialsOk,
+    carbonOk,
+    recycleOk,
+    status,
+  };
+}
 
 function ColorPickerField({
   label,
@@ -92,10 +133,6 @@ function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
 }
 
-function isHexColor(value: string) {
-  return /^#([0-9a-fA-F]{6})$/.test(value);
-}
-
 async function syncSettingsToShopMetafields(
   admin: { graphql: (query: string, init?: { variables?: Record<string, unknown> }) => Promise<Response> },
   payload: {
@@ -104,6 +141,7 @@ async function syncSettingsToShopMetafields(
     borderRadius: number;
     fontSize: number;
     isEnabled: boolean;
+    showEstimatedFallbacks: boolean;
   },
 ) {
   const shopQuery = `#graphql
@@ -139,6 +177,7 @@ async function syncSettingsToShopMetafields(
     ["border_radius", String(payload.borderRadius), "number_integer"],
     ["font_size", String(payload.fontSize), "number_integer"],
     ["is_enabled", String(payload.isEnabled), "boolean"],
+    ["show_fallbacks", String(payload.showEstimatedFallbacks), "boolean"],
   ] as const;
 
   const response = await admin.graphql(mutation, {
@@ -167,209 +206,95 @@ async function syncSettingsToShopMetafields(
   }
 }
 
-async function syncAutoProductMetafields(
-  admin: { graphql: (query: string, init?: { variables?: Record<string, unknown> }) => Promise<Response> },
-  productId: string,
-  payload: {
-    materiali?: string;
-    carbonFootprint?: string;
-    riciclabilita?: number;
-  },
-) {
-  const metafields: Array<{
-    ownerId: string;
-    namespace: string;
-    key: string;
-    type: string;
-    value: string;
-  }> = [];
-
-  if (payload.materiali != null) {
-    metafields.push({
-      ownerId: productId,
-      namespace: "custom",
-      key: "materiali",
-      type: "single_line_text_field",
-      value: payload.materiali,
-    });
-  }
-  if (payload.carbonFootprint != null) {
-    metafields.push({
-      ownerId: productId,
-      namespace: "custom",
-      key: "carbon_footprint",
-      type: "single_line_text_field",
-      value: payload.carbonFootprint,
-    });
-  }
-  if (payload.riciclabilita != null) {
-    metafields.push({
-      ownerId: productId,
-      namespace: "custom",
-      key: "riciclabilit",
-      type: "number_integer",
-      value: String(payload.riciclabilita),
-    });
-  }
-  if (metafields.length === 0) return;
-
-  const mutation = `#graphql
-    mutation EcoPassSetProductMetafields($metafields: [MetafieldsSetInput!]!) {
-      metafieldsSet(metafields: $metafields) {
-        userErrors {
-          field
-          message
-        }
-      }
-    }
-  `;
-
-  const response = await admin.graphql(mutation, {
-    variables: {
-      metafields,
-    },
-  });
-
-  const jsonPayload = (await response.json()) as {
-    data?: {
-      metafieldsSet?: {
-        userErrors?: Array<{ message: string }>;
-      };
-    };
-  };
-  const userErrors = jsonPayload.data?.metafieldsSet?.userErrors ?? [];
-  if (userErrors.length > 0) {
-    throw new Error(`Errore salvataggio metafield prodotto: ${userErrors.map((e) => e.message).join("; ")}`);
-  }
-}
-
-type ProductForAutofill = {
-  id: string;
-  title: string;
-  productType: string;
-  vendor: string;
-  tags: string[];
-  customMateriali?: { value?: string } | null;
-  customCarbon?: { value?: string } | null;
-  customRiciclabilita?: { value?: string } | null;
-  legacyMaterials?: { value?: string } | null;
-  legacyCarbon?: { value?: string } | null;
-  legacyRecyclability?: { value?: string } | null;
-};
-
-async function ensureAutoMetafieldsForProducts(
-  admin: { graphql: (query: string, init?: { variables?: Record<string, unknown> }) => Promise<Response> },
-  products: ProductForAutofill[],
-) {
-  for (const product of products) {
-    const hasMaterials = Boolean(product.customMateriali?.value) || Boolean(product.legacyMaterials?.value);
-    const hasCarbon = Boolean(product.customCarbon?.value) || Boolean(product.legacyCarbon?.value);
-    const hasRecyclability =
-      Boolean(product.customRiciclabilita?.value) || Boolean(product.legacyRecyclability?.value);
-
-    if (hasMaterials && hasCarbon && hasRecyclability) continue;
-
-    const auto = buildAutoDppFromProduct({
-      title: product.title,
-      productType: product.productType ?? "",
-      vendor: product.vendor ?? "",
-      tags: product.tags ?? [],
-    });
-
-    await syncAutoProductMetafields(admin, product.id, {
-      materiali: hasMaterials ? undefined : auto.materiali,
-      carbonFootprint: hasCarbon ? undefined : auto.carbonFootprint,
-      riciclabilita: hasRecyclability ? undefined : auto.riciclabilita,
-    });
-  }
-}
-
 export async function loader({ request }: LoaderFunctionArgs) {
+  const { locale: uiLocale } = await getUiLocale(request);
   const { session, admin } = await authenticate.admin(request);
   const settings = await getOrCreateSettingsByShopDomain(session.shop);
-  const productsQuery = `#graphql
-    query EcoPassProducts {
-      products(first: 50, sortKey: TITLE) {
-        nodes {
-          id
-          title
-          productType
-          vendor
-          tags
-          customMateriali: metafield(namespace: "custom", key: "materiali") {
-            value
-          }
-          customCarbon: metafield(namespace: "custom", key: "carbon_footprint") {
-            value
-          }
-          customRiciclabilita: metafield(namespace: "custom", key: "riciclabilit") {
-            value
-          }
-          legacyMaterials: metafield(namespace: "ecopass", key: "materials") {
-            value
-          }
-          legacyCarbon: metafield(namespace: "ecopass", key: "carbon_footprint") {
-            value
-          }
-          legacyRecyclability: metafield(namespace: "ecopass", key: "recyclability_index") {
-            value
-          }
-        }
-      }
-    }
-  `;
-  const productsResponse = await admin.graphql(productsQuery);
-  const productsPayload = (await productsResponse.json()) as {
-    data?: {
-      products?: {
-        nodes?: Array<ProductForAutofill>;
-      };
-    };
-  };
-  const productNodes =
-    productsPayload.data?.products?.nodes?.filter(
-      (p): p is ProductForAutofill => Boolean(p.id) && Boolean(p.title),
-    ) ?? [];
 
-  try {
-    await ensureAutoMetafieldsForProducts(admin, productNodes);
-  } catch (error) {
-    console.error("EcoPass: errore compilazione automatica loader", error);
-  }
+  const url = new URL(request.url);
+  const after = url.searchParams.get("after") || null;
 
-  const products = productNodes.map((p) => ({ id: p.id, title: p.title }));
+  const { nodes, pageInfo } = await fetchProductsPage(admin, {
+    first: PAGE_SIZE,
+    after,
+  });
+
+  const products = nodes.map(rowStatus);
 
   return json<LoaderData>({
+    uiLocale,
     settings: {
       badgeColor: settings.badgeColor,
       textColor: settings.textColor,
       borderRadius: settings.borderRadius,
       fontSize: settings.fontSize,
       isEnabled: settings.isEnabled,
+      showEstimatedFallbacks: settings.showEstimatedFallbacks,
     },
     products,
+    pagination: {
+      after,
+      hasNextPage: pageInfo.hasNextPage,
+      endCursor: pageInfo.endCursor,
+      pageSize: PAGE_SIZE,
+    },
   });
 }
 
 export async function action({ request }: ActionFunctionArgs) {
   const { session, admin } = await authenticate.admin(request);
   const formData = await request.formData();
+  const intent = String(formData.get("intent") ?? "save");
+
+  const url = new URL(request.url);
+  const afterParam = url.searchParams.get("after");
+
+  if (intent === "sync-auto") {
+    try {
+      const { nodes } = await fetchProductsPage(admin, {
+        first: PAGE_SIZE,
+        after: afterParam,
+      });
+      await ensureAutoMetafieldsForProducts(admin, nodes);
+      const next = new URL(request.url);
+      next.searchParams.set("synced", "1");
+      return redirect(next.toString());
+    } catch (e) {
+      if (e instanceof Response) throw e;
+      logServerError("app._index.sync-auto", e, { shop: session.shop });
+      const { locale } = await getUiLocale(request);
+      return json<ActionData>(
+        { ok: false, message: adminCopy(locale).errSave },
+        { status: 500 },
+      );
+    }
+  }
 
   const badgeColor = String(formData.get("badgeColor") ?? "").trim();
   const textColor = String(formData.get("textColor") ?? "").trim();
   const borderRadius = Number(formData.get("borderRadius") ?? 12);
   const fontSize = Number(formData.get("fontSize") ?? 14);
   const isEnabled = formData.get("isEnabled") === "on";
+  const showEstimatedFallbacks = formData.get("showEstimatedFallbacks") === "on";
+
+  const { locale: errLocale } = await getUiLocale(request);
+  const str = adminCopy(errLocale);
 
   const fieldErrors: Record<string, string> = {};
-  if (!isHexColor(badgeColor)) fieldErrors.badgeColor = "Inserisci un colore HEX valido (#RRGGBB).";
-  if (!isHexColor(textColor)) fieldErrors.textColor = "Inserisci un colore HEX valido (#RRGGBB).";
-  if (!Number.isFinite(borderRadius)) fieldErrors.borderRadius = "Valore non valido.";
-  if (!Number.isFinite(fontSize)) fieldErrors.fontSize = "Valore non valido.";
+  if (!isHexColor(badgeColor))
+    fieldErrors.badgeColor =
+      errLocale === "it" ? "Inserisci un colore HEX valido (#RRGGBB)." : "Enter a valid HEX colour (#RRGGBB).";
+  if (!isHexColor(textColor))
+    fieldErrors.textColor =
+      errLocale === "it" ? "Inserisci un colore HEX valido (#RRGGBB)." : "Enter a valid HEX colour (#RRGGBB).";
+  if (!Number.isFinite(borderRadius))
+    fieldErrors.borderRadius = errLocale === "it" ? "Valore non valido." : "Invalid value.";
+  if (!Number.isFinite(fontSize))
+    fieldErrors.fontSize = errLocale === "it" ? "Valore non valido." : "Invalid value.";
 
   if (Object.keys(fieldErrors).length > 0) {
     return json<ActionData>(
-      { ok: false, message: "Controlla i campi evidenziati.", fieldErrors },
+      { ok: false, message: str.errValidation, fieldErrors },
       { status: 400 },
     );
   }
@@ -381,6 +306,7 @@ export async function action({ request }: ActionFunctionArgs) {
       borderRadius: clamp(Math.round(borderRadius), 0, 40),
       fontSize: clamp(Math.round(fontSize), 10, 22),
       isEnabled,
+      showEstimatedFallbacks,
     };
 
     await saveSettingsByShopDomain(session.shop, payload);
@@ -388,31 +314,32 @@ export async function action({ request }: ActionFunctionArgs) {
     try {
       await syncSettingsToShopMetafields(admin, payload);
     } catch (syncError) {
-      // Salvataggio locale riuscito: non blocchiamo l'admin UI.
       console.error("EcoPass: sync metafields settings fallita", syncError);
     }
 
-    return json<ActionData>({ ok: true, message: "Impostazioni salvate con successo." });
+    return json<ActionData>({ ok: true, message: str.saved });
   } catch (error) {
-    console.error("EcoPass: errore salvataggio impostazioni", error);
-    return json<ActionData>(
-      { ok: false, message: "Errore di rete o database. Riprova tra pochi secondi." },
-      { status: 500 },
-    );
+    logServerError("app._index.save", error, { shop: session.shop });
+    return json<ActionData>({ ok: false, message: str.errSave }, { status: 500 });
   }
 }
 
 export default function EcoPassAdminPage() {
-  const { settings, products } = useLoaderData<typeof loader>();
+  const { uiLocale, settings, products, pagination } = useLoaderData<LoaderData>();
   const actionData = useActionData<ActionData>();
   const navigation = useNavigation();
+  const [searchParams] = useSearchParams();
   const isSubmitting = navigation.state === "submitting";
+
+  const str = adminCopy(uiLocale);
+  const formAction = `/app?${searchParams.toString()}`;
 
   const [badgeColor, setBadgeColor] = useState(settings.badgeColor);
   const [textColor, setTextColor] = useState(settings.textColor);
   const [borderRadius, setBorderRadius] = useState(settings.borderRadius);
   const [fontSize, setFontSize] = useState(settings.fontSize);
   const [isEnabled, setIsEnabled] = useState(settings.isEnabled);
+  const [showEstimatedFallbacks, setShowEstimatedFallbacks] = useState(settings.showEstimatedFallbacks);
 
   const previewStyle = useMemo(
     () => ({
@@ -430,8 +357,46 @@ export default function EcoPassAdminPage() {
     [badgeColor, textColor, borderRadius, fontSize],
   );
 
+  const statusLabel = (s: LoaderData["products"][0]["status"]) => {
+    if (s === "complete") return str.statusComplete;
+    if (s === "partial") return str.statusPartial;
+    return str.statusEmpty;
+  };
+
+  const planLine = interpolate(str.planActive, {
+    price: ECOPASS_BILLING_PRICE_EUR.toFixed(2),
+    cycle: ECOPASS_BILLING_CYCLE_DAYS,
+    trial: ECOPASS_BILLING_TRIAL_DAYS,
+  });
+
+  function buildAppUrl(updates: Record<string, string | undefined>) {
+    const p = new URLSearchParams(searchParams);
+    for (const [k, v] of Object.entries(updates)) {
+      if (v === undefined) p.delete(k);
+      else p.set(k, v);
+    }
+    const qs = p.toString();
+    return qs ? `/app?${qs}` : "/app";
+  }
+
+  const syncedOk = searchParams.get("synced") === "1";
+
+  const rowMarkup = products.map((product, index) => (
+    <IndexTable.Row id={product.id} key={product.id} position={index}>
+      <IndexTable.Cell>
+        <Text variant="bodyMd" fontWeight="bold" as="span">
+          {product.title}
+        </Text>
+      </IndexTable.Cell>
+      <IndexTable.Cell>{product.materialsOk ? "✓" : "—"}</IndexTable.Cell>
+      <IndexTable.Cell>{product.carbonOk ? "✓" : "—"}</IndexTable.Cell>
+      <IndexTable.Cell>{product.recycleOk ? "✓" : "—"}</IndexTable.Cell>
+      <IndexTable.Cell>{statusLabel(product.status)}</IndexTable.Cell>
+    </IndexTable.Row>
+  ));
+
   return (
-    <Page title="EcoPass - Badge DPP">
+    <Page title={str.pageTitle}>
       <BlockStack gap="400">
         <InlineStack gap="300" blockAlign="center">
           <img
@@ -442,13 +407,18 @@ export default function EcoPassAdminPage() {
             style={{ borderRadius: "8px", display: "block" }}
           />
           <Text as="h1" variant="headingLg">
-            EcoPass - Badge DPP
+            {str.pageTitle}
           </Text>
         </InlineStack>
+
+        {syncedOk ? (
+          <Banner tone="success">{str.syncDone}</Banner>
+        ) : null}
 
         {actionData?.message ? (
           <Banner tone={actionData.ok ? "success" : "critical"}>{actionData.message}</Banner>
         ) : null}
+
         <Box
           background="bg-surface-info"
           borderColor="border"
@@ -459,80 +429,161 @@ export default function EcoPassAdminPage() {
           <InlineStack gap="300" blockAlign="center" wrap={false}>
             <img
               src="/plan-logo.svg"
-              alt="Piano"
+              alt=""
               width={24}
               height={24}
               style={{ borderRadius: "6px", display: "block", flexShrink: 0 }}
             />
             <Text as="span" variant="bodyMd">
-              Piano attivo: {BILLING_PLAN_LABEL} - {BILLING_PRICE_EUR.toFixed(2)} EUR/mese, prova gratuita di{" "}
-              {BILLING_TRIAL_DAYS} giorni.
+              {planLine}
             </Text>
           </InlineStack>
         </Box>
+
         <Card>
           <BlockStack gap="200">
             <Text as="h2" variant="headingMd">
-              Termini di fatturazione (IT)
+              {str.billingCardIt}
             </Text>
             <Text as="p" variant="bodyMd">
-              EcoPass Pro costa {BILLING_PRICE_EUR.toFixed(2)} EUR ogni {BILLING_CYCLE_DAYS} giorni dopo una
-              prova gratuita di {BILLING_TRIAL_DAYS} giorni.
+              {interpolate(str.billingBodyItA, {
+                price: ECOPASS_BILLING_PRICE_EUR.toFixed(2),
+                cycle: ECOPASS_BILLING_CYCLE_DAYS,
+                trial: ECOPASS_BILLING_TRIAL_DAYS,
+              })}
             </Text>
             <Text as="p" variant="bodyMd">
-              Il piano si rinnova automaticamente finche&apos; non viene annullato dal merchant tramite Shopify
-              Admin.
+              {str.billingBodyItB}
             </Text>
             <Text as="p" variant="bodyMd">
-              L&apos;annullamento interrompe i rinnovi futuri; eventuali periodi gia&apos; pagati restano attivi fino
-              a scadenza.
+              {str.billingBodyItC}
             </Text>
           </BlockStack>
           <Box paddingBlockStart="300">
             <BlockStack gap="200">
               <Text as="h3" variant="headingSm">
-                Billing terms (EN)
+                {str.billingCardEn}
               </Text>
               <Text as="p" variant="bodyMd">
-                EcoPass Pro is billed at EUR {BILLING_PRICE_EUR.toFixed(2)} every {BILLING_CYCLE_DAYS} days
-                after a {BILLING_TRIAL_DAYS}-day free trial.
+                {interpolate(str.billingBodyEnA, {
+                  price: ECOPASS_BILLING_PRICE_EUR.toFixed(2),
+                  cycle: ECOPASS_BILLING_CYCLE_DAYS,
+                  trial: ECOPASS_BILLING_TRIAL_DAYS,
+                })}
               </Text>
               <Text as="p" variant="bodyMd">
-                The subscription renews automatically until canceled by the merchant in Shopify Admin.
+                {str.billingBodyEnB}
               </Text>
               <Text as="p" variant="bodyMd">
-                Cancellation stops future renewals; any already-paid period remains active until its end date.
+                {str.billingBodyEnC}
               </Text>
             </BlockStack>
           </Box>
         </Card>
 
         <Card>
-          <Form method="post">
+          <BlockStack gap="300">
+            <Text as="h2" variant="headingMd">
+              {str.productsTitle}
+            </Text>
+            <Text as="p" variant="bodyMd" tone="subdued">
+              {str.productsHelp}
+            </Text>
+            {products.length === 0 ? (
+              <Text as="p" tone="subdued">
+                {uiLocale === "it" ? "Nessun prodotto nel catalogo." : "No products in the catalog."}
+              </Text>
+            ) : (
+              <IndexTable
+                resourceName={{
+                  singular: uiLocale === "it" ? "prodotto" : "product",
+                  plural: uiLocale === "it" ? "prodotti" : "products",
+                }}
+                itemCount={products.length}
+                headings={[
+                  { title: str.colProduct },
+                  { title: str.colMaterials },
+                  { title: str.colCarbon },
+                  { title: str.colRecycle },
+                  { title: str.colStatus },
+                ]}
+                selectable={false}
+              >
+                {rowMarkup}
+              </IndexTable>
+            )}
+
+            <InlineStack gap="300" wrap>
+              <Form method="post" action={formAction}>
+                <input type="hidden" name="intent" value="sync-auto" />
+                <Button submit loading={isSubmitting}>
+                  {str.syncPage}
+                </Button>
+              </Form>
+              {pagination.hasNextPage && pagination.endCursor ? (
+                <Button url={buildAppUrl({ after: pagination.endCursor!, synced: undefined })}>
+                  {str.paginationNext}
+                </Button>
+              ) : null}
+              {pagination.after ? (
+                <Button url={buildAppUrl({ after: undefined, synced: undefined })}>
+                  {str.paginationStart}
+                </Button>
+              ) : null}
+            </InlineStack>
+          </BlockStack>
+        </Card>
+
+        <Card>
+          <Form method="post" action={formAction}>
+            <input type="hidden" name="intent" value="save" />
             <BlockStack gap="400">
+              <Text as="h2" variant="headingMd">
+                {str.appearance}
+              </Text>
+
+              <BlockStack gap="200">
+                <Text as="h3" variant="headingSm">
+                  {str.fallbacksTitle}
+                </Text>
+                <Text as="p" variant="bodySm" tone="subdued">
+                  {str.fallbacksHelp}
+                </Text>
+                <Checkbox
+                  label={str.fallbacksLabel}
+                  name="showEstimatedFallbacks"
+                  checked={showEstimatedFallbacks}
+                  onChange={setShowEstimatedFallbacks}
+                />
+              </BlockStack>
+
               <InlineStack gap="400" align="start">
                 <Box minWidth="280px">
                   <ColorPickerField
-                    label="Colore badge (HEX)"
+                    label={str.colorBadge}
                     name="badgeColor"
                     value={badgeColor}
                     onChange={setBadgeColor}
-                    error={actionData && !actionData.ok ? actionData.fieldErrors?.badgeColor : undefined}
+                    error={
+                      actionData && !actionData.ok ? actionData.fieldErrors?.badgeColor : undefined
+                    }
                   />
                 </Box>
                 <Box minWidth="280px">
                   <ColorPickerField
-                    label="Colore testo (HEX)"
+                    label={str.colorText}
                     name="textColor"
                     value={textColor}
                     onChange={setTextColor}
-                    error={actionData && !actionData.ok ? actionData.fieldErrors?.textColor : undefined}
+                    error={
+                      actionData && !actionData.ok ? actionData.fieldErrors?.textColor : undefined
+                    }
                   />
                 </Box>
               </InlineStack>
 
               <RangeSlider
-                label={`Raggio angoli: ${borderRadius}px`}
+                label={`${str.radius}: ${borderRadius}px`}
                 min={0}
                 max={40}
                 step={1}
@@ -543,7 +594,7 @@ export default function EcoPassAdminPage() {
               <input type="hidden" name="borderRadius" value={borderRadius} />
 
               <RangeSlider
-                label={`Dimensione font: ${fontSize}px`}
+                label={`${str.fontSize}: ${fontSize}px`}
                 min={10}
                 max={22}
                 step={1}
@@ -554,7 +605,7 @@ export default function EcoPassAdminPage() {
               <input type="hidden" name="fontSize" value={fontSize} />
 
               <Checkbox
-                label="Attiva badge globalmente"
+                label={str.enableGlobal}
                 name="isEnabled"
                 checked={isEnabled}
                 onChange={setIsEnabled}
@@ -562,7 +613,7 @@ export default function EcoPassAdminPage() {
 
               <InlineStack align="end">
                 <Button submit variant="primary" loading={isSubmitting}>
-                  Salva impostazioni
+                  {str.save}
                 </Button>
               </InlineStack>
             </BlockStack>
@@ -572,16 +623,16 @@ export default function EcoPassAdminPage() {
         <Card>
           <BlockStack gap="300">
             <Text as="h2" variant="headingMd">
-              Preview
+              {str.preview}
             </Text>
             {isEnabled ? (
               <div style={previewStyle}>
                 <span aria-hidden>🌱</span>
-                <span>DPP EcoPass pronto</span>
+                <span>{str.previewOn}</span>
               </div>
             ) : (
               <Text as="p" tone="subdued">
-                Badge disattivato: non verrà visualizzato nello storefront.
+                {str.previewOff}
               </Text>
             )}
           </BlockStack>

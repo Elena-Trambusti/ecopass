@@ -4,7 +4,10 @@ import { createReadableStreamFromReadable } from "@remix-run/node";
 import { RemixServer } from "@remix-run/react";
 import { isbot } from "isbot";
 import { renderToPipeableStream } from "react-dom/server";
+import { captureExceptionToSentry, initSentry } from "./sentry.server";
 import shopify from "./shopify.server";
+
+initSentry();
 
 const ABORT_DELAY = 5_000;
 
@@ -52,6 +55,9 @@ function handleBotRequest(
         onError(error: unknown) {
           responseStatusCode = 500;
           if (shellRendered) console.error(error);
+          if (error instanceof Error && process.env.SENTRY_DSN) {
+            captureExceptionToSentry(error);
+          }
         },
       },
     );
@@ -89,6 +95,9 @@ function handleBrowserRequest(
         onError(error: unknown) {
           responseStatusCode = 500;
           if (shellRendered) console.error(error);
+          if (error instanceof Error && process.env.SENTRY_DSN) {
+            captureExceptionToSentry(error);
+          }
         },
       },
     );

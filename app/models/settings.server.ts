@@ -6,6 +6,7 @@ export type SettingsInput = {
   borderRadius: number;
   fontSize: number;
   isEnabled: boolean;
+  showEstimatedFallbacks: boolean;
 };
 
 const DEFAULT_SETTINGS: SettingsInput = {
@@ -14,6 +15,7 @@ const DEFAULT_SETTINGS: SettingsInput = {
   borderRadius: 12,
   fontSize: 14,
   isEnabled: true,
+  showEstimatedFallbacks: true,
 };
 
 export async function getOrCreateShopByDomain(domain: string) {

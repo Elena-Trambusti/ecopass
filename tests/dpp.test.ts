@@ -26,5 +26,26 @@ describe("buildAutoDppFromProduct", () => {
     expect(payload.materiali).toBe("Composito tecnico certificato");
     expect(payload.riciclabilita).toBe(70);
   });
+
+  it("returns shirt-like defaults", () => {
+    const payload = buildAutoDppFromProduct({
+      title: "Hoodie",
+      productType: "T-shirt",
+      vendor: "",
+      tags: [],
+    });
+    expect(payload.riciclabilita).toBe(81);
+  });
+
+  it("returns shoe-like defaults", () => {
+    const payload = buildAutoDppFromProduct({
+      title: "Sneaker",
+      productType: "shoe",
+      vendor: "",
+      tags: [],
+    });
+    expect(payload.riciclabilita).toBe(58);
+  });
 });
+
 

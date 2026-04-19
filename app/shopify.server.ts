@@ -62,6 +62,13 @@ const shopSettingsMetafieldDefinitions = [
     type: "boolean",
     description: "Abilitazione globale badge EcoPass.",
   },
+  {
+    name: "EcoPass Show Estimated Fallbacks",
+    key: "show_fallbacks",
+    type: "boolean",
+    description:
+      "Se vero, mostra stime/demo quando mancano metafield; se falso solo dati reali o messaggio incompleto.",
+  },
 ] as const;
 
 async function ensureMetafieldDefinitions(session: Session) {

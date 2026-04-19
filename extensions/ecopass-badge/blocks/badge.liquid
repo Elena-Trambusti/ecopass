@@ -9,59 +9,99 @@
   assign border_radius = shop.metafields.ecopass_settings.border_radius.value | default: 12
   assign font_size = shop.metafields.ecopass_settings.font_size.value | default: 14
 
-  assign has_data = false
-  if materials != blank or carbon_footprint != blank or recyclability_index != blank
-    assign has_data = true
+  assign show_fallbacks = true
+  unless shop.metafields.ecopass_settings.show_fallbacks == blank
+    assign show_fallbacks = shop.metafields.ecopass_settings.show_fallbacks.value
+  endunless
+
+  assign has_real_data = false
+  if product.metafields.custom.materiali.value != blank or product.metafields.custom.carbon_footprint.value != blank or product.metafields.custom.riciclabilit.value != blank
+    assign has_real_data = true
+  elsif product.metafields.ecopass.materials.value != blank or product.metafields.ecopass.carbon_footprint.value != blank or product.metafields.ecopass.recyclability_index.value != blank
+    assign has_real_data = true
   endif
 
   assign show_badge = true
 
-  if materials == blank or carbon_footprint == blank or recyclability_index == blank
-    if fingerprint contains 'snowboard'
-      if materials == blank
-        assign materials = 'Legno, fibra di vetro, acciaio'
-      endif
-      if carbon_footprint == blank
-        assign carbon_footprint = '18.5 kg CO2e'
-      endif
-      if recyclability_index == blank
-        assign recyclability_index = 62
-      endif
-    elsif fingerprint contains 'shirt' or fingerprint contains 't-shirt' or fingerprint contains 'hoodie'
-      if materials == blank
-        assign materials = 'Cotone, poliestere riciclato'
-      endif
-      if carbon_footprint == blank
-        assign carbon_footprint = '6.8 kg CO2e'
-      endif
-      if recyclability_index == blank
-        assign recyclability_index = 81
-      endif
-    elsif fingerprint contains 'shoe' or fingerprint contains 'sneaker'
-      if materials == blank
-        assign materials = 'Gomma, tessuto tecnico, EVA'
-      endif
-      if carbon_footprint == blank
-        assign carbon_footprint = '9.7 kg CO2e'
-      endif
-      if recyclability_index == blank
-        assign recyclability_index = 58
-      endif
-    else
-      if materials == blank
-        assign materials = 'Composito tecnico certificato'
-      endif
-      if carbon_footprint == blank
-        assign carbon_footprint = '8.9 kg CO2e'
-      endif
-      if recyclability_index == blank
-        assign recyclability_index = 70
+  if show_fallbacks
+    if materials == blank or carbon_footprint == blank or recyclability_index == blank
+      if fingerprint contains 'snowboard'
+        if materials == blank
+          assign materials = 'Legno, fibra di vetro, acciaio'
+        endif
+        if carbon_footprint == blank
+          assign carbon_footprint = '18.5 kg CO2e'
+        endif
+        if recyclability_index == blank
+          assign recyclability_index = 62
+        endif
+      elsif fingerprint contains 'shirt' or fingerprint contains 't-shirt' or fingerprint contains 'hoodie'
+        if materials == blank
+          assign materials = 'Cotone, poliestere riciclato'
+        endif
+        if carbon_footprint == blank
+          assign carbon_footprint = '6.8 kg CO2e'
+        endif
+        if recyclability_index == blank
+          assign recyclability_index = 81
+        endif
+      elsif fingerprint contains 'shoe' or fingerprint contains 'sneaker'
+        if materials == blank
+          assign materials = 'Gomma, tessuto tecnico, EVA'
+        endif
+        if carbon_footprint == blank
+          assign carbon_footprint = '9.7 kg CO2e'
+        endif
+        if recyclability_index == blank
+          assign recyclability_index = 58
+        endif
+      else
+        if materials == blank
+          assign materials = 'Composito tecnico certificato'
+        endif
+        if carbon_footprint == blank
+          assign carbon_footprint = '8.9 kg CO2e'
+        endif
+        if recyclability_index == blank
+          assign recyclability_index = 70
+        endif
       endif
     endif
   endif
+
+  assign eco_lang = request.locale.iso_code | default: 'it'
+  if eco_lang == blank
+    assign eco_lang = 'it'
+  endif
+
+  assign eco_aria_it = 'Informazioni sulla sostenibilità del prodotto'
+  assign eco_aria_en = 'Product sustainability information'
+  assign eco_aria = eco_aria_it
+  if eco_lang contains 'en'
+    assign eco_aria = eco_aria_en
+  endif
+
+  assign eco_estimated_it = 'Valori stimati / demo'
+  assign eco_estimated_en = 'Estimated / demo values'
+  assign eco_estimated_note = eco_estimated_it
+  if eco_lang contains 'en'
+    assign eco_estimated_note = eco_estimated_en
+  endif
+
+  assign eco_incomplete_it = 'Alcuni dati DPP mancano: completa i metafield prodotto oppure attiva le stime nella dashboard EcoPass.'
+  assign eco_incomplete_en = 'Some DPP fields are missing: fill product metafields or enable estimates in the EcoPass admin.'
+  assign eco_incomplete = eco_incomplete_it
+  if eco_lang contains 'en'
+    assign eco_incomplete = eco_incomplete_en
+  endif
+
+  assign show_incomplete_notice = false
+  if show_fallbacks == false and has_real_data == false
+    assign show_incomplete_notice = true
+  endif
 %}
 
-{% if request.design_mode and has_data == false %}
+{% if request.design_mode and has_real_data == false %}
   {% assign materials = 'Cotone riciclato 80%, Poliestere 20%' %}
   {% assign carbon_footprint = '2.1 kg CO2e' %}
   {% assign recyclability_index = 78 %}
@@ -71,6 +111,10 @@
   {{ 'ecopass-badge.css' | asset_url | stylesheet_tag }}
   <div
     class="ecopass-badge"
+    role="region"
+    aria-label="{{ eco_aria }}"
+    data-ecopass-aria="{{ eco_aria }}"
+    data-ecopass-lang="{{ eco_lang }}"
     style="
       --ecopass-badge-color: {{ badge_color }};
       --ecopass-text-color: {{ text_color }};
@@ -80,23 +124,46 @@
   >
     <div class="ecopass-badge__header">
       <span class="ecopass-badge__icon" aria-hidden="true">🌱</span>
-      <span class="ecopass-badge__title">Digital Product Passport</span>
+      {% if eco_lang contains 'en' %}
+        <span class="ecopass-badge__title">Digital Product Passport</span>
+      {% else %}
+        <span class="ecopass-badge__title">Digital Product Passport</span>
+      {% endif %}
     </div>
 
-    <ul class="ecopass-badge__list" role="list">
-      <li>
-        <strong>Materiali:</strong>
-        {% if materials != blank %}{{ materials }}{% else %}Dato non disponibile{% endif %}
-      </li>
-      <li>
-        <strong>Carbon footprint:</strong>
-        {% if carbon_footprint != blank %}{{ carbon_footprint }}{% else %}Dato non disponibile{% endif %}
-      </li>
-      <li>
-        <strong>Riciclabilità:</strong>
-        {% if recyclability_index != blank %}{{ recyclability_index }}/100{% else %}Dato non disponibile{% endif %}
-      </li>
-    </ul>
+    {% if show_incomplete_notice and request.design_mode == false %}
+      <p class="ecopass-badge__notice">{{ eco_incomplete }}</p>
+    {% else %}
+      {% if show_fallbacks and has_real_data == false %}
+        <p class="ecopass-badge__estimated">{{ eco_estimated_note }}</p>
+      {% endif %}
+      <ul class="ecopass-badge__list" role="list">
+        <li>
+          {% if eco_lang contains 'en' %}
+            <strong>Materials:</strong>
+          {% else %}
+            <strong>Materiali:</strong>
+          {% endif %}
+          {% if materials != blank %}{{ materials }}{% else %}{% if eco_lang contains 'en' %}Not available{% else %}Dato non disponibile{% endif %}{% endif %}
+        </li>
+        <li>
+          {% if eco_lang contains 'en' %}
+            <strong>Carbon footprint:</strong>
+          {% else %}
+            <strong>Carbon footprint:</strong>
+          {% endif %}
+          {% if carbon_footprint != blank %}{{ carbon_footprint }}{% else %}{% if eco_lang contains 'en' %}Not available{% else %}Dato non disponibile{% endif %}{% endif %}
+        </li>
+        <li>
+          {% if eco_lang contains 'en' %}
+            <strong>Recyclability:</strong>
+          {% else %}
+            <strong>Riciclabilità:</strong>
+          {% endif %}
+          {% if recyclability_index != blank %}{{ recyclability_index }}/100{% else %}{% if eco_lang contains 'en' %}Not available{% else %}Dato non disponibile{% endif %}{% endif %}
+        </li>
+      </ul>
+    {% endif %}
   </div>
   <script src="{{ 'ecopass-badge.js' | asset_url }}" defer></script>
 {% endif %}

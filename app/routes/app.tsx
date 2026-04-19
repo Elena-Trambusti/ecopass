@@ -5,20 +5,28 @@ import { AppProvider } from "@shopify/shopify-app-remix/react";
 import { boundary } from "@shopify/shopify-app-remix/server";
 import { NavMenu } from "@shopify/app-bridge-react";
 import { Banner, BlockStack } from "@shopify/polaris";
+import polarisEn from "@shopify/polaris/locales/en.json";
 import polarisItalian from "@shopify/polaris/locales/it.json";
+import type { AdminLocale } from "../i18n/admin";
 import { authenticate, ECOPASS_BILLING_PLAN } from "../shopify.server";
 import {
   getMerchantSafeBillingError,
   isBillingApiBlockedForAppDistribution,
 } from "../utils/billing.server";
+import { getUiLocale } from "../utils/locale.server";
 
 export type AppLoaderData = {
   apiKey: string;
   billingUnavailablePublicDistribution?: boolean;
   billingIssueMessage?: string;
+  uiLocale: AdminLocale;
 };
 
 export async function loader({ request }: LoaderFunctionArgs) {
+  const { locale: uiLocale, setCookie } = await getUiLocale(request);
+  const headers = new Headers();
+  if (setCookie) headers.append("Set-Cookie", setCookie);
+
   const { billing } = await authenticate.admin(request);
   const isTestCharge = process.env.NODE_ENV !== "production";
 
@@ -34,57 +42,75 @@ export async function loader({ request }: LoaderFunctionArgs) {
     });
   } catch (error) {
     if (isBillingApiBlockedForAppDistribution(error)) {
-      return json<AppLoaderData>({
-        apiKey: process.env.SHOPIFY_API_KEY ?? "",
-        billingUnavailablePublicDistribution: true,
-      });
+      return json<AppLoaderData>(
+        {
+          apiKey: process.env.SHOPIFY_API_KEY ?? "",
+          billingUnavailablePublicDistribution: true,
+          uiLocale,
+        },
+        { headers },
+      );
     }
     const merchantSafeBillingError = getMerchantSafeBillingError(error);
     if (merchantSafeBillingError) {
-      return json<AppLoaderData>({
-        apiKey: process.env.SHOPIFY_API_KEY ?? "",
-        billingIssueMessage: merchantSafeBillingError,
-      });
+      return json<AppLoaderData>(
+        {
+          apiKey: process.env.SHOPIFY_API_KEY ?? "",
+          billingIssueMessage: merchantSafeBillingError,
+          uiLocale,
+        },
+        { headers },
+      );
     }
     throw error;
   }
 
-  return json<AppLoaderData>({ apiKey: process.env.SHOPIFY_API_KEY ?? "" });
+  return json<AppLoaderData>(
+    { apiKey: process.env.SHOPIFY_API_KEY ?? "", uiLocale },
+    { headers },
+  );
 }
 
 export const headers: HeadersFunction = (headersArgs) => boundary.headers(headersArgs);
 
-/** Mantiene shop/host/embedded nelle navigazioni (necessario per App Bridge). */
-function AppNavMenu() {
+function AppNavMenu({ uiLocale }: { uiLocale: AdminLocale }) {
   const [searchParams] = useSearchParams();
-  const qs = searchParams.toString();
-  const suffix = qs ? `?${qs}` : "";
+  const otherLang = uiLocale === "it" ? "en" : "it";
+  const langParams = new URLSearchParams(searchParams);
+  langParams.set("lang", otherLang);
+  const appQs = langParams.toString();
+
+  const homeTo = searchParams.toString() ? `/app?${searchParams.toString()}` : "/app";
 
   return (
     <NavMenu>
-      <Link to={`/app${suffix}`} rel="home">
+      <Link to={homeTo} rel="home">
         EcoPass
       </Link>
+      <Link to={`/app?${appQs}`}>{uiLocale === "it" ? "English" : "Italiano"}</Link>
     </NavMenu>
   );
 }
 
 export default function AppLayout() {
-  const { apiKey, billingUnavailablePublicDistribution, billingIssueMessage } =
+  const { apiKey, billingUnavailablePublicDistribution, billingIssueMessage, uiLocale } =
     useLoaderData<AppLoaderData>();
 
+  const polarisLocale = uiLocale === "en" ? polarisEn : polarisItalian;
+
   return (
-    <AppProvider isEmbeddedApp apiKey={apiKey} i18n={polarisItalian}>
-      <AppNavMenu />
+    <AppProvider isEmbeddedApp apiKey={apiKey} i18n={polarisLocale}>
+      <AppNavMenu uiLocale={uiLocale} />
       <BlockStack gap="300">
         {billingUnavailablePublicDistribution ? (
-          <Banner tone="warning" title="Billing API non disponibile in questo ambiente">
-            L&apos;app non è ancora in distribuzione pubblica: Shopify blocca i test Billing API in questa fase.
-            App e dashboard restano utilizzabili in sviluppo.
+          <Banner tone="warning" title={uiLocale === "it" ? "Billing API non disponibile" : "Billing API unavailable"}>
+            {uiLocale === "it"
+              ? "L'app non è ancora in distribuzione pubblica: Shopify blocca i test Billing API in questa fase."
+              : "This app is not on public distribution yet: Shopify restricts Billing API in this phase."}
           </Banner>
         ) : null}
         {billingIssueMessage ? (
-          <Banner tone="critical" title="Problema di fatturazione">
+          <Banner tone="critical" title={uiLocale === "it" ? "Fatturazione" : "Billing"}>
             {billingIssueMessage}
           </Banner>
         ) : null}
