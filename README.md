@@ -56,9 +56,9 @@ Run before each release:
 
 ## Privacy and Legal
 
-- Privacy policy draft: `PRIVACY.md`
-- Terms draft: `TERMS.md`
-- Support policy draft: `SUPPORT.md`
+Testi **italiano + inglese** in `PRIVACY.md`, `TERMS.md`, `SUPPORT.md`. Pagine pubbliche statiche in `docs-site/` (stesso contenuto bilingue).
+
+**Solo tu puoi fare nel Partner Shopify:** vedi `docs/SOLO_TU_SHOPIFY.md`.
 
 ## App Store Submission References
 

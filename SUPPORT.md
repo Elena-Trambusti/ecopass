@@ -1,34 +1,67 @@
-# EcoPass Support Policy (Draft)
+# EcoPass — Supporto / Support Policy
 
-Last updated: 2026-04-18
+**Ultimo aggiornamento / Last updated:** 2026-04-19
 
-## Contact Channels
+---
 
-- Email: support@ecopass.app
+## Italiano
 
-## Coverage
+### Canali
 
-Support includes:
+- Email: **support@ecopass.app**
 
-- Installation and onboarding help
-- Billing and subscription questions
-- Theme app extension setup guidance
-- Troubleshooting for badge rendering and metafield sync
+### Cosa copre il supporto
 
-## Initial Response Targets
+- Installazione e onboarding
+- Abbonamento e fatturazione Shopify
+- Configurazione dell’estensione tema
+- Risoluzione problemi su badge e metafield
 
-- Critical production issue: within 1 business day
-- Standard request: within 2 business days
+### Tempi di prima risposta (indicativi)
 
-## What to Include in a Ticket
+- Problema critico in produzione: entro **1 giorno lavorativo**
+- Richiesta standard: entro **2 giorni lavorativi**
+
+### Cosa includere in una richiesta
+
+- Dominio del negozio
+- Descrizione del problema e comportamento atteso
+- Passaggi per riprodurre
+- Screenshot o video
+- Data, ora e fuso orario
+
+### Incidenti di servizio
+
+In caso di disservizio che colpisce più merchant, aggiornamenti via email fino alla risoluzione.
+
+---
+
+## English
+
+### Channels
+
+- Email: **support@ecopass.app**
+
+### Coverage
+
+- Installation and onboarding
+- Billing and subscription (Shopify)
+- Theme app extension setup
+- Troubleshooting badge display and metafield sync
+
+### Initial response targets (indicative)
+
+- Critical production issue: within **1 business day**
+- Standard request: within **2 business days**
+
+### What to include in a ticket
 
 - Shop domain
-- Issue summary and expected behavior
+- Summary and expected behaviour
 - Steps to reproduce
-- Screenshots or video
+- Screenshots or short video
 - Timestamp and timezone
 
-## Incident Communication
+### Service incidents
 
-If a service incident affects multiple merchants, status updates are provided by email until resolution.
-
+If an incident affects multiple merchants, updates are communicated by email until resolved.
