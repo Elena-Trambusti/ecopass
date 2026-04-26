@@ -73,7 +73,7 @@ const shopSettingsMetafieldDefinitions = [
 
 async function ensureMetafieldDefinitions(session: Session) {
   try {
-    const endpoint = `https://${session.shop}/admin/api/${ApiVersion.January25}/graphql.json`;
+    const endpoint = `https://${session.shop}/admin/api/${ApiVersion.April25}/graphql.json`;
     const headers = {
       "Content-Type": "application/json",
       "X-Shopify-Access-Token": session.accessToken ?? "",
@@ -127,7 +127,8 @@ async function ensureMetafieldDefinitions(session: Session) {
       };
 
       const existingKeys = new Set(
-        payload.data?.metafieldDefinitions?.nodes?.map((item) => item.key) ?? [],
+        payload.data?.metafieldDefinitions?.nodes?.map((item) => item.key) ??
+          [],
       );
 
       for (const definition of definitions) {
@@ -203,8 +204,18 @@ async function ensureMetafieldDefinitions(session: Session) {
       }
     }
 
-    await ensureDefinitionSet("PRODUCT", "ecopass", productMetafieldDefinitions, false);
-    await ensureDefinitionSet("SHOP", "ecopass_settings", shopSettingsMetafieldDefinitions, true);
+    await ensureDefinitionSet(
+      "PRODUCT",
+      "ecopass",
+      productMetafieldDefinitions,
+      false,
+    );
+    await ensureDefinitionSet(
+      "SHOP",
+      "ecopass_settings",
+      shopSettingsMetafieldDefinitions,
+      true,
+    );
   } catch (error) {
     // Non blocchiamo il login dell'app: registriamo solo in log.
     console.error("EcoPass: ensureMetafieldDefinitions failed", error);
@@ -212,7 +223,9 @@ async function ensureMetafieldDefinitions(session: Session) {
 }
 
 export const ECOPASS_BILLING_PLAN = "EcoPass Pro";
+export const ECOPASS_BILLING_PLAN_ANNUAL = "EcoPass Pro Annual";
 export const ECOPASS_BILLING_PRICE_EUR = 14.99;
+export const ECOPASS_BILLING_PRICE_ANNUAL_EUR = 179.0;
 export const ECOPASS_BILLING_TRIAL_DAYS = 7;
 
 const shopify = shopifyApp({
@@ -221,8 +234,14 @@ const shopify = shopifyApp({
   appUrl: process.env.SHOPIFY_APP_URL ?? "",
   authPathPrefix: "/auth",
   scopes: (process.env.SCOPES ?? "").split(",").filter(Boolean),
-  apiVersion: ApiVersion.January25,
+  apiVersion: ApiVersion.April25,
+  isEmbeddedApp: true,
   sessionStorage: new PrismaSessionStorage(prisma),
+  useOnlineTokens: true,
+  future: {
+    v3_lineItemBilling: true,
+  },
+  distribution: AppDistribution.AppStore,
   billing: {
     [ECOPASS_BILLING_PLAN]: {
       lineItems: [
@@ -234,9 +253,17 @@ const shopify = shopifyApp({
       ],
       trialDays: ECOPASS_BILLING_TRIAL_DAYS,
     },
+    [ECOPASS_BILLING_PLAN_ANNUAL]: {
+      lineItems: [
+        {
+          amount: ECOPASS_BILLING_PRICE_ANNUAL_EUR,
+          currencyCode: "EUR",
+          interval: BillingInterval.Annual,
+        },
+      ],
+      trialDays: ECOPASS_BILLING_TRIAL_DAYS,
+    },
   },
-  /** Nome corretto della chiave in shopifyApp (non `appDistribution`). */
-  distribution: AppDistribution.AppStore,
   webhooks: {
     APP_UNINSTALLED: {
       deliveryMethod: DeliveryMethod.Http,
@@ -259,9 +286,6 @@ const shopify = shopifyApp({
     afterAuth: async ({ session }) => {
       await ensureMetafieldDefinitions(session);
     },
-  },
-  future: {
-    unstable_newEmbeddedAuthStrategy: true,
   },
 });
 

@@ -22,6 +22,11 @@
   endif
 
   assign show_badge = true
+  unless shop.metafields.ecopass_settings.is_enabled == blank
+    unless shop.metafields.ecopass_settings.is_enabled.value
+      assign show_badge = false
+    endunless
+  endunless
 
   if show_fallbacks
     if materials == blank or carbon_footprint == blank or recyclability_index == blank
@@ -101,10 +106,13 @@
   endif
 %}
 
-{% if request.design_mode and has_real_data == false %}
-  {% assign materials = 'Cotone riciclato 80%, Poliestere 20%' %}
-  {% assign carbon_footprint = '2.1 kg CO2e' %}
-  {% assign recyclability_index = 78 %}
+{% if request.design_mode %}
+  {% assign show_badge = true %}
+  {% if has_real_data == false %}
+    {% assign materials = 'Cotone riciclato 80%, Poliestere 20%' %}
+    {% assign carbon_footprint = '2.1 kg CO2e' %}
+    {% assign recyclability_index = 78 %}
+  {% endif %}
 {% endif %}
 
 {% if show_badge %}

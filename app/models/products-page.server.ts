@@ -52,13 +52,19 @@ export async function fetchProductsPage(
   admin: { graphql: (query: string, init?: { variables?: Record<string, unknown> }) => Promise<Response> },
   options: { first: number; after: string | null },
 ) {
-  const response = await admin.graphql(PRODUCTS_QUERY, {
-    variables: {
-      first: options.first,
-      after: options.after ?? undefined,
-      sortKey: "TITLE",
-    },
-  });
+  let response: Response;
+  try {
+    response = await admin.graphql(PRODUCTS_QUERY, {
+      variables: {
+        first: options.first,
+        after: options.after ?? undefined,
+        sortKey: "TITLE",
+      },
+    });
+  } catch (e) {
+    console.error("[EcoPass fetchProductsPage] GraphQL call failed:", e);
+    return { nodes: [] as ProductWithDppFields[], pageInfo: { hasNextPage: false, endCursor: null } };
+  }
 
   const payload = (await response.json()) as {
     data?: {

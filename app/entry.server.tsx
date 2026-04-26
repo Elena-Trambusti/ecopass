@@ -50,10 +50,12 @@ function handleBotRequest(
           pipe(body);
         },
         onShellError(error: unknown) {
+          console.error("[EcoPass Bot ShellError]", error);
           reject(error);
         },
         onError(error: unknown) {
           responseStatusCode = 500;
+          console.error("[EcoPass Bot onError]", error);
           if (shellRendered) console.error(error);
           if (error instanceof Error && process.env.SENTRY_DSN) {
             captureExceptionToSentry(error);
@@ -90,10 +92,12 @@ function handleBrowserRequest(
           pipe(body);
         },
         onShellError(error: unknown) {
+          console.error("[EcoPass Browser ShellError]", error);
           reject(error);
         },
         onError(error: unknown) {
           responseStatusCode = 500;
+          console.error("[EcoPass Browser onError]", error);
           if (shellRendered) console.error(error);
           if (error instanceof Error && process.env.SENTRY_DSN) {
             captureExceptionToSentry(error);

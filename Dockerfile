@@ -29,4 +29,4 @@ COPY --from=build /app/public ./public
 ENV PORT=8080
 EXPOSE 8080
 
-CMD ["sh", "-c", "npx prisma migrate deploy && npm run start"]
+CMD ["sh", "-c", "npx prisma db push --accept-data-loss && npm run start"]

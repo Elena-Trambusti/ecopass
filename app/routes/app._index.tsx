@@ -208,18 +208,45 @@ async function syncSettingsToShopMetafields(
 
 export async function loader({ request }: LoaderFunctionArgs) {
   const { locale: uiLocale } = await getUiLocale(request);
-  const { session, admin } = await authenticate.admin(request);
-  const settings = await getOrCreateSettingsByShopDomain(session.shop);
+  const authResult = await authenticate.admin(request);
+  
+  // Se authenticate lancia una Response (redirect OAuth), lasciala passare
+  const { session, admin } = authResult;
+  
+  let settings;
+  try {
+    settings = await getOrCreateSettingsByShopDomain(session.shop);
+  } catch (e) {
+    if (e instanceof Response) throw e;
+    console.error("[EcoPass app._index] Settings error:", e);
+    settings = {
+      badgeColor: "#2E7D32",
+      textColor: "#FFFFFF",
+      borderRadius: 12,
+      fontSize: 14,
+      isEnabled: true,
+      showEstimatedFallbacks: true,
+    };
+  }
 
   const url = new URL(request.url);
   const after = url.searchParams.get("after") || null;
 
-  const { nodes, pageInfo } = await fetchProductsPage(admin, {
-    first: PAGE_SIZE,
-    after,
-  });
+  let products: LoaderData["products"] = [];
+  let pageInfo = { hasNextPage: false, endCursor: null as string | null };
 
-  const products = nodes.map(rowStatus);
+  try {
+    const result = await fetchProductsPage(admin, {
+      first: PAGE_SIZE,
+      after,
+    });
+    products = result.nodes.map(rowStatus);
+    pageInfo = result.pageInfo;
+  } catch (e) {
+    if (e instanceof Response) throw e;
+    console.error("[EcoPass app._index] Products fetch error:", e);
+    // Mostra pagina vuota invece di crashare con 403
+  }
 
   return json<LoaderData>({
     uiLocale,

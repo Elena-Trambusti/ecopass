@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <title>EcoPass Logo Preview - Screenshot per PNG</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px;
+      gap: 40px;
+    }
+    .logo-container {
+      background: white;
+      border-radius: 16px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 30px;
+      text-align: center;
+    }
+    .size-120 {
+      width: 120px;
+      height: 120px;
+    }
+    .size-1024 {
+      width: 1024px;
+      height: 1024px;
+    }
+    h2 {
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .instructions {
+      max-width: 800px;
+      background: #e8f5e9;
+      border-left: 4px solid #4CAF50;
+      padding: 20px;
+      border-radius: 8px;
+    }
+    .instructions h3 {
+      margin-top: 0;
+      color: #2E7D32;
+    }
+    .instructions ol {
+      text-align: left;
+      line-height: 1.8;
+    }
+    code {
+      background: #f0f0f0;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+    }
+  </style>
+</head>
+<body>
+  <div class="instructions">
+    <h3>Istruzioni per creare il PNG:</h3>
+    <ol>
+      <li>Fai uno screenshot di uno dei logo qui sotto (consigliato il 1024x1024)</li>
+      <li>Ritaglia l'immagine per includere solo il cerchio verde (senza bordi bianchi)</li>
+      <li>Salva come PNG con sfondo trasparente (se possibile) o bianco</li>
+      <li>Carica su Shopify Partner Dashboard → App details → App icon</li>
+    </ol>
+  </div>
+
+  <div class="logo-container">
+    <h2>Icona App (120x120px)</h2>
+    <svg class="size-120" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="EcoPass logo">
+      <defs>
+        <linearGradient id="leafGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2E7D4A"/>
+          <stop offset="50%" stop-color="#1E8E5A"/>
+          <stop offset="100%" stop-color="#4CAF50"/>
+        </linearGradient>
+        <linearGradient id="circleGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1B5E20"/>
+          <stop offset="100%" stop-color="#2E7D32"/>
+        </linearGradient>
+        <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+        </filter>
+      </defs>
+      <circle cx="60" cy="60" r="56" fill="url(#circleGrad)" filter="url(#shadow)"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#4CAF50" stroke-width="2" opacity="0.4"/>
+      <path d="M60 25 C75 25, 88 38, 88 55 C88 72, 75 82, 60 95 C45 82, 32 72, 32 55 C32 38, 45 25, 60 25Z" fill="url(#leafGrad)"/>
+      <path d="M60 30 L60 88" stroke="#1B5E20" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+      <path d="M60 45 L48 52" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 55 L72 62" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 65 L48 72" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 75 L72 78" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 8 A52 52 0 0 1 112 60" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+      <path d="M112 60 A52 52 0 0 1 60 112" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+      <path d="M60 112 A52 52 0 0 1 8 60" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+      <circle cx="60" cy="8" r="3" fill="#B8F5D6"/>
+      <circle cx="112" cy="60" r="3" fill="#B8F5D6"/>
+      <circle cx="60" cy="112" r="3" fill="#B8F5D6"/>
+    </svg>
+  </div>
+
+  <div class="logo-container">
+    <h2>Galleria Shopify (1024x1024px) - CONSIGLIATO</h2>
+    <svg class="size-1024" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="EcoPass logo">
+      <defs>
+        <linearGradient id="leafGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#2E7D4A"/>
+          <stop offset="50%" stop-color="#1E8E5A"/>
+          <stop offset="100%" stop-color="#4CAF50"/>
+        </linearGradient>
+        <linearGradient id="circleGrad2" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stop-color="#1B5E20"/>
+          <stop offset="100%" stop-color="#2E7D32"/>
+        </linearGradient>
+        <filter id="shadow2" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="2" stdDeviation="3" flood-opacity="0.3"/>
+        </filter>
+      </defs>
+      <circle cx="60" cy="60" r="56" fill="url(#circleGrad2)" filter="url(#shadow2)"/>
+      <circle cx="60" cy="60" r="50" fill="none" stroke="#4CAF50" stroke-width="2" opacity="0.4"/>
+      <path d="M60 25 C75 25, 88 38, 88 55 C88 72, 75 82, 60 95 C45 82, 32 72, 32 55 C32 38, 45 25, 60 25Z" fill="url(#leafGrad2)"/>
+      <path d="M60 30 L60 88" stroke="#1B5E20" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+      <path d="M60 45 L48 52" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 55 L72 62" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 65 L48 72" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 75 L72 78" stroke="#1B5E20" stroke-width="2" stroke-linecap="round" opacity="0.4"/>
+      <path d="M60 8 A52 52 0 0 1 112 60" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.8"/>
+      <path d="M112 60 A52 52 0 0 1 60 112" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.6"/>
+      <path d="M60 112 A52 52 0 0 1 8 60" fill="none" stroke="#81C784" stroke-width="3" stroke-linecap="round" opacity="0.4"/>
+      <circle cx="60" cy="8" r="3" fill="#B8F5D6"/>
+      <circle cx="112" cy="60" r="3" fill="#B8F5D6"/>
+      <circle cx="60" cy="112" r="3" fill="#B8F5D6"/>
+    </svg>
+  </div>
+
+  <div class="instructions">
+    <h3>Shortcut rapido:</h3>
+    <p>Apri questo file nel browser: <code>https://ecopass-shopify.fly.dev/logo-preview.html</code></p>
+    <p>Poi fai screenshot del logo 1024x1024 e ritaglia.</p>
+  </div>
+</body>
+</html>
